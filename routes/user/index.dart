@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:dart_frog/dart_frog.dart';
 import 'package:tasklist_backend/constants/connection.dart';
 import 'package:tasklist_backend/src/generated/prisma/prisma_client.dart';
-import 'package:tasklist_backend/user/user_model.dart';
 import 'package:tasklist_backend/users.dart';
 
 Future<Response> onRequest(RequestContext context) async {
@@ -64,21 +63,34 @@ Response _getUsers() {
 Future<Response> _addNewUser(RequestContext context) async {
   final data = jsonDecode(await context.request.body()) as Map<String, dynamic>;
   if (data['name'] != null && data['age'] != null && data['email'] != null) {
-    final userModel = UserModel.fromJson(data);
     // users.add(userModel);
     final prisma = PrismaClient(
       datasources: const Datasources(
         db: connection,
       ),
     );
-    await prisma.user.create(data: UserCreateInput.fromJson(data));
-    return Response.json(
-      body: {
-        'message': 'User Added Successfully',
-        'user': userModel.toJson(),
-      },
-      statusCode: HttpStatus.accepted,
-    );
+    try {
+      final userModel = await prisma.user.create(
+        data: UserCreateInput.fromJson(
+          data,
+        ),
+      );
+      return Response.json(
+        body: {
+          'message': 'User Added Successfully',
+          'user': userModel.toJson(),
+        },
+        statusCode: HttpStatus.accepted,
+      );
+    } catch (e) {
+      return Response.json(
+        body: {
+          'message': 'Internal Server Error',
+          'Error': e,
+        },
+        statusCode: HttpStatus.internalServerError,
+      );
+    }
   } else {
     return Response.json(
       body: {
