@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:dart_frog/dart_frog.dart';
 import 'package:tasklist_backend/constants/my_prisma_client.dart';
 import 'package:tasklist_backend/src/generated/prisma/prisma_client.dart';
-import 'package:tasklist_backend/user/user_model.dart';
 import 'package:tasklist_backend/users.dart';
 
 Future<Response> onRequest(
@@ -56,35 +55,40 @@ Future<Response> _getSpecificUsers(RequestContext context, String id) async {
 }
 
 Future<Response> _updateUser(RequestContext context, String id) async {
-  final userId = id;
-  if (users.any((element) => element.id.toString() == userId)) {
-    final data =
-        jsonDecode(await context.request.body()) as Map<String, dynamic>;
-    final existingUserModel =
-        users.firstWhere((element) => element.id.toString() == userId);
-    final userModel = UserModel(
-      id: existingUserModel.id,
-      userName: data['name'] != null
-          ? data['name'].toString()
-          : existingUserModel.userName,
-      email: data['email'] != null
-          ? data['email'].toString()
-          : existingUserModel.email,
-      age: data['age'] != null ? data['age'] as int : existingUserModel.age,
+  final userId = int.parse(id);
+  final prisma = myPrismaClient;
+  final data = jsonDecode(await context.request.body()) as Map<String, dynamic>;
+
+  try {
+    final item = await prisma.user.update(
+      data: UserUpdateInput(
+        age: IntFieldUpdateOperationsInput(
+          set: data['age'] as int,
+        ),
+        email: StringFieldUpdateOperationsInput(
+          set: data['email'].toString(),
+        ),
+        name: StringFieldUpdateOperationsInput(
+          set: data['name'].toString(),
+        ),
+      ),
+      where: UserWhereUniqueInput(
+        id: userId,
+      ),
     );
-    users[users.indexWhere((element) => element.id.toString() == userId)] =
-        userModel;
     return Response.json(
       body: {
         'message': 'User Updated Successfully',
-        'user': userModel,
+        'user': item,
       },
+      statusCode: HttpStatus.badRequest,
     );
-  } else {
+  } catch (e) {
     return Response.json(
       body: {
-        'message': 'User Does Not Exist With This Id',
+        'message': e,
       },
+      statusCode: HttpStatus.badRequest,
     );
   }
 }

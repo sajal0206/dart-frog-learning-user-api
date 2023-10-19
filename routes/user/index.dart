@@ -25,7 +25,6 @@ Future<Response> _getUsers() async {
 Future<Response> _addNewUser(RequestContext context) async {
   final data = jsonDecode(await context.request.body()) as Map<String, dynamic>;
   if (data['name'] != null && data['age'] != null && data['email'] != null) {
-    // users.add(userModel);
     final prisma = myPrismaClient;
     try {
       final userModel = await prisma.user.create(
