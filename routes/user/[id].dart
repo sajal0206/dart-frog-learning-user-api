@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:dart_frog/dart_frog.dart';
 import 'package:tasklist_backend/src/generated/prisma/prisma_client.dart';
+import 'package:tasklist_backend/user/user_repository.dart';
 
 Future<Response> onRequest(
   RequestContext context,
@@ -20,16 +21,9 @@ Future<Response> onRequest(
 
 Future<Response> _getSpecificUsers(RequestContext context, String id) async {
   final userId = id;
-  final prisma = context.read<PrismaClient>();
   try {
-    final data = (await prisma.user.findMany(
-      where: UserWhereInput(
-        id: IntFilter(
-          equals: int.parse(userId),
-        ),
-      ),
-    ))
-        .toList();
+    final data =
+        await context.read<UserRepository>().getUniqueUser(int.parse(userId));
     if (data.isNotEmpty) {
       return Response.json(
         body: data,
@@ -92,11 +86,9 @@ Future<Response> _updateUser(RequestContext context, String id) async {
 }
 
 Future<Response> _deleteUser(RequestContext context, String id) async {
-  final userId = int.parse(id);
-  final prisma = context.read<PrismaClient>();
   try {
-    final item =
-        await prisma.user.delete(where: UserWhereUniqueInput(id: userId));
+    final userId = int.parse(id);
+    final item = await context.read<UserRepository>().deleteUser(userId);
     return Response.json(
       body: {'message': 'User deleted successfully', 'user': item},
     );

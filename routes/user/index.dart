@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:dart_frog/dart_frog.dart';
-import 'package:tasklist_backend/src/generated/prisma/prisma_client.dart';
+import 'package:tasklist_backend/user/user_repository.dart';
 
 Future<Response> onRequest(RequestContext context) async {
   return switch (context.request.method) {
@@ -13,8 +13,7 @@ Future<Response> onRequest(RequestContext context) async {
 }
 
 Future<Response> _getUsers(RequestContext context) async {
-  final prisma = context.read<PrismaClient>();
-  final users = (await prisma.user.findMany()).toList();
+  final users = await context.read<UserRepository>().getAllUsers();
   return Response.json(
     body: users,
   );
@@ -24,17 +23,15 @@ Future<Response> _getUsers(RequestContext context) async {
 Future<Response> _addNewUser(RequestContext context) async {
   final data = jsonDecode(await context.request.body()) as Map<String, dynamic>;
   if (data['name'] != null && data['age'] != null && data['email'] != null) {
-    final prisma = context.read<PrismaClient>();
+    final userRepo = context.read<UserRepository>();
     try {
-      final userModel = await prisma.user.create(
-        data: UserCreateInput.fromJson(
-          data,
-        ),
+      final userModel = await userRepo.createNewUser(
+        data,
       );
       return Response.json(
         body: {
           'message': 'User Added Successfully',
-          'user': userModel.toJson(),
+          'user': userModel,
         },
         statusCode: HttpStatus.accepted,
       );
