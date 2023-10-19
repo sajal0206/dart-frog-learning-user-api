@@ -2,19 +2,18 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:dart_frog/dart_frog.dart';
-import 'package:tasklist_backend/constants/my_prisma_client.dart';
 import 'package:tasklist_backend/src/generated/prisma/prisma_client.dart';
 
 Future<Response> onRequest(RequestContext context) async {
   return switch (context.request.method) {
-    HttpMethod.get => await _getUsers(),
+    HttpMethod.get => await _getUsers(context),
     HttpMethod.post => await _addNewUser(context),
     _ => Response(body: '${context.request.method.name} is not allowed now'),
   };
 }
 
-Future<Response> _getUsers() async {
-  final prisma = myPrismaClient;
+Future<Response> _getUsers(RequestContext context) async {
+  final prisma = context.read<PrismaClient>();
   final users = (await prisma.user.findMany()).toList();
   return Response.json(
     body: users,
@@ -25,7 +24,7 @@ Future<Response> _getUsers() async {
 Future<Response> _addNewUser(RequestContext context) async {
   final data = jsonDecode(await context.request.body()) as Map<String, dynamic>;
   if (data['name'] != null && data['age'] != null && data['email'] != null) {
-    final prisma = myPrismaClient;
+    final prisma = context.read<PrismaClient>();
     try {
       final userModel = await prisma.user.create(
         data: UserCreateInput.fromJson(

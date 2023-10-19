@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:dart_frog/dart_frog.dart';
-import 'package:tasklist_backend/constants/my_prisma_client.dart';
 import 'package:tasklist_backend/src/generated/prisma/prisma_client.dart';
 
 Future<Response> onRequest(
@@ -21,7 +20,7 @@ Future<Response> onRequest(
 
 Future<Response> _getSpecificUsers(RequestContext context, String id) async {
   final userId = id;
-  final prisma = myPrismaClient;
+  final prisma = context.read<PrismaClient>();
   try {
     final data = (await prisma.user.findMany(
       where: UserWhereInput(
@@ -55,7 +54,7 @@ Future<Response> _getSpecificUsers(RequestContext context, String id) async {
 
 Future<Response> _updateUser(RequestContext context, String id) async {
   final userId = int.parse(id);
-  final prisma = myPrismaClient;
+  final prisma = context.read<PrismaClient>();
   final data = jsonDecode(await context.request.body()) as Map<String, dynamic>;
 
   try {
@@ -94,7 +93,7 @@ Future<Response> _updateUser(RequestContext context, String id) async {
 
 Future<Response> _deleteUser(RequestContext context, String id) async {
   final userId = int.parse(id);
-  final prisma = myPrismaClient;
+  final prisma = context.read<PrismaClient>();
   try {
     final item =
         await prisma.user.delete(where: UserWhereUniqueInput(id: userId));
