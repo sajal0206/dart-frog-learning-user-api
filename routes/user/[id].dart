@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:dart_frog/dart_frog.dart';
 import 'package:tasklist_backend/constants/my_prisma_client.dart';
 import 'package:tasklist_backend/src/generated/prisma/prisma_client.dart';
-import 'package:tasklist_backend/users.dart';
 
 Future<Response> onRequest(
   RequestContext context,
@@ -94,11 +93,20 @@ Future<Response> _updateUser(RequestContext context, String id) async {
 }
 
 Future<Response> _deleteUser(RequestContext context, String id) async {
-  final userId = id;
-  users.removeWhere((element) => element.id.toString() == userId);
-  return Response.json(
-    body: {
-      'message': 'User deleted successfully',
-    },
-  );
+  final userId = int.parse(id);
+  final prisma = myPrismaClient;
+  try {
+    final item =
+        await prisma.user.delete(where: UserWhereUniqueInput(id: userId));
+    return Response.json(
+      body: {'message': 'User deleted successfully', 'user': item},
+    );
+  } catch (e) {
+    return Response.json(
+      body: {
+        'message': e,
+      },
+      statusCode: HttpStatus.badRequest,
+    );
+  }
 }
