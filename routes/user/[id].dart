@@ -1,6 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:dart_frog/dart_frog.dart';
+import 'package:tasklist_backend/constants/my_prisma_client.dart';
+import 'package:tasklist_backend/src/generated/prisma/prisma_client.dart';
 import 'package:tasklist_backend/user/user_model.dart';
 import 'package:tasklist_backend/users.dart';
 
@@ -9,7 +12,7 @@ Future<Response> onRequest(
   String id,
 ) async {
   return switch (context.request.method) {
-    HttpMethod.get => _getSpecificUsers(context, id),
+    HttpMethod.get => await _getSpecificUsers(context, id),
     HttpMethod.put => await _updateUser(context, id),
     HttpMethod.delete => await _deleteUser(context, id),
     _ => Response(
@@ -18,17 +21,36 @@ Future<Response> onRequest(
   };
 }
 
-Response _getSpecificUsers(RequestContext context, String id) {
+Future<Response> _getSpecificUsers(RequestContext context, String id) async {
   final userId = id;
-  if (users.any((element) => element.id.toString() == userId)) {
-    return Response.json(
-      body: users.firstWhere((element) => element.id.toString() == userId),
-    );
-  } else {
+  final prisma = myPrismaClient;
+  try {
+    final data = (await prisma.user.findMany(
+      where: UserWhereInput(
+        id: IntFilter(
+          equals: int.parse(userId),
+        ),
+      ),
+    ))
+        .toList();
+    if (data.isNotEmpty) {
+      return Response.json(
+        body: data,
+      );
+    } else {
+      return Response.json(
+        body: {
+          'message': 'User Does Not Exist With Id: $userId',
+        },
+        statusCode: HttpStatus.noContent,
+      );
+    }
+  } catch (e) {
     return Response.json(
       body: {
-        'message': 'User Does Not Exist With This Id',
+        'message': 'Invalid Id: $userId',
       },
+      statusCode: HttpStatus.badRequest,
     );
   }
 }
