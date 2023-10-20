@@ -1,9 +1,8 @@
 import 'package:dart_frog/dart_frog.dart';
 
 Response onRequest(RequestContext context) {
-  final data = context.read<String>();
   if (context.request.method == HttpMethod.get) {
-    return Response(body: data);
+    return Response(body: 'This is a get method');
   } else if (context.request.method == HttpMethod.post) {
     return Response(body: 'This POST request on index!');
   } else {
