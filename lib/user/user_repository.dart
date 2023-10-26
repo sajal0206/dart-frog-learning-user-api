@@ -1,4 +1,4 @@
-import 'package:tasklist_backend/src/generated/prisma/prisma_client.dart';
+import 'package:mysql_utils/mysql_utils.dart';
 
 /// user repository
 class UserRepository {
@@ -8,44 +8,85 @@ class UserRepository {
   );
 
   /// prisma client database
-  final PrismaClient _db;
+  final MysqlUtils _db;
 
   /// function to create new user using prisma client into the database
-  Future<User?> createNewUser(Map<String, dynamic> data) async {
-    final user = await _db.user.create(
-      data: UserCreateInput.fromJson(
-        data,
-      ),
+  Future<Map<String, dynamic>> createNewUser(Map<String, dynamic> data) async {
+    final userId = await _db.insert(
+      table: 'user',
+      insertData: {
+        'name': data['name'],
+        'email': data['email'],
+        'age': data['age'],
+      },
     );
-    return user;
+    final userData = await _db.getOne(
+      table: 'user',
+      where: {
+        'id': userId,
+      },
+    );
+    return userData as Map<String, dynamic>;
+  }
+
+  /// function to create new user using prisma client into the database
+  Future<Map<String, dynamic>> updateOldUser(
+    Map<String, dynamic> data,
+    int id,
+  ) async {
+    final state = await _db.update(
+      table: 'user',
+      updateData: {
+        'name': data['name'],
+        'email': data['email'],
+        'age': data['age'],
+      },
+      where: {
+        'id': id,
+      },
+    );
+    if (state == 1) {
+      final userData = await _db.getOne(
+        table: 'user',
+        where: {
+          'id': id,
+        },
+      );
+      return userData as Map<String, dynamic>;
+    } else {
+      return {};
+    }
   }
 
   /// function to get users using prisma client from the database
-  Future<List<User>> getAllUsers() async {
-    final user = (await _db.user.findMany()).toList();
+  Future<List<dynamic>> getAllUsers() async {
+    final user = (await _db.getAll(table: 'user')).toList();
     return user;
   }
 
   /// function to delete user from prisma client database
-  Future<User?> deleteUser(int id) async {
-    final user = await _db.user.delete(
-      where: UserWhereUniqueInput(
-        id: id,
-      ),
+  Future<int?> deleteUser(int id) async {
+    final user = await _db.delete(
+      table: 'user',
+      where: {
+        'id': id,
+      },
     );
     return user;
   }
 
   /// get user from id
-  Future<List<User>> getUniqueUser(int userId) async {
-    final users = (await _db.user.findMany(
-      where: UserWhereInput(
-        id: IntFilter(
-          equals: userId,
-        ),
-      ),
-    ))
-        .toList();
-    return users;
+  Future<Map<String, dynamic>> getUniqueUser(int userId) async {
+    final user = await _db.getOne(
+      table: 'user',
+      where: {
+        'id': userId,
+      },
+    );
+    if (user.isNotEmpty) {
+      return user as Map<String, dynamic>;
+    } else {
+      return {};
+    }
   }
 }

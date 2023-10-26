@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:dart_frog/dart_frog.dart';
-import 'package:tasklist_backend/src/generated/prisma/prisma_client.dart';
 import 'package:tasklist_backend/user/user_repository.dart';
 
 Future<Response> onRequest(
@@ -48,33 +47,27 @@ Future<Response> _getSpecificUsers(RequestContext context, String id) async {
 
 Future<Response> _updateUser(RequestContext context, String id) async {
   final userId = int.parse(id);
-  final prisma = context.read<PrismaClient>();
   final data = jsonDecode(await context.request.body()) as Map<String, dynamic>;
 
   try {
-    final item = await prisma.user.update(
-      data: UserUpdateInput(
-        age: IntFieldUpdateOperationsInput(
-          set: data['age'] as int,
-        ),
-        email: StringFieldUpdateOperationsInput(
-          set: data['email'].toString(),
-        ),
-        name: StringFieldUpdateOperationsInput(
-          set: data['name'].toString(),
-        ),
-      ),
-      where: UserWhereUniqueInput(
-        id: userId,
-      ),
-    );
-    return Response.json(
-      body: {
-        'message': 'User Updated Successfully',
-        'user': item,
-      },
-      statusCode: HttpStatus.badRequest,
-    );
+    final apiResp =
+        await context.read<UserRepository>().updateOldUser(data, userId);
+    if (apiResp.isNotEmpty) {
+      return Response.json(
+        body: {
+          'message': 'User Updated Successfully',
+          'user': apiResp,
+        },
+        statusCode: HttpStatus.badRequest,
+      );
+    } else {
+      return Response.json(
+        body: {
+          'message': 'No user found with user id: $userId',
+        },
+        statusCode: HttpStatus.badRequest,
+      );
+    }
   } catch (e) {
     return Response.json(
       body: {
@@ -89,9 +82,19 @@ Future<Response> _deleteUser(RequestContext context, String id) async {
   try {
     final userId = int.parse(id);
     final item = await context.read<UserRepository>().deleteUser(userId);
-    return Response.json(
-      body: {'message': 'User deleted successfully', 'user': item},
-    );
+    if (item == 1) {
+      return Response.json(
+        body: {
+          'message': 'User deleted successfully',
+        },
+      );
+    } else {
+      return Response.json(
+        body: {
+          'message': 'No User Available With user id: $id',
+        },
+      );
+    }
   } catch (e) {
     return Response.json(
       body: {
